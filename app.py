@@ -745,8 +745,7 @@ st.markdown("---")
 st.markdown("**ETOPS Airline Strategy Game** - 持続可能な航空運航を学ぶシミュレーションゲーム")
 st.markdown("**🎯 ゲーム目標**: 80点以上で航空会社経営成功！")
 st.markdown("**✈️ 新機能**: 21機種の航空機 | 10路線チャレンジ | 予算・機材制限モード")
-st.markdown("**ETOPS**: Extended-range Twin-engine Operational Performance Standards")地図 (Folium)" if x == "folium" else "シンプル地図 (Plotly)"
-)
+st.markdown("**ETOPS**: Extended-range Twin-engine Operational Performance Standards"))
 st.session_state.map_type = map_type
 
 # --- Aircraft Selection ---

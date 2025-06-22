@@ -17,7 +17,155 @@ def load_data():
 
 aircraft_df, airports_df = load_data()
 
-# --- Helper Functions ---
+# --- Scoring and Title System ---
+def calculate_game_score(etops_compliant, co2_per_passenger, capacity_utilization, aircraft_sdg_score):
+    """
+    Calculate comprehensive game score (0-100 points)
+    """
+    # ETOPS Compliance Score (0-25 points)
+    etops_score = 25 if etops_compliant else 0
+    
+    # Environmental Score (0-25 points) - Lower CO2 per passenger is better
+    if co2_per_passenger <= 50:
+        env_score = 25
+    elif co2_per_passenger <= 100:
+        env_score = 20
+    elif co2_per_passenger <= 150:
+        env_score = 15
+    elif co2_per_passenger <= 200:
+        env_score = 10
+    else:
+        env_score = 5
+    
+    # Efficiency Score (0-25 points) - Based on capacity utilization
+    if capacity_utilization >= 90:
+        eff_score = 25
+    elif capacity_utilization >= 80:
+        eff_score = 20
+    elif capacity_utilization >= 70:
+        eff_score = 15
+    elif capacity_utilization >= 60:
+        eff_score = 10
+    else:
+        eff_score = 5
+    
+    # Aircraft Performance Score (0-25 points) - Based on SDG score
+    aircraft_score = (aircraft_sdg_score / 10) * 25
+    
+    total_score = etops_score + env_score + eff_score + aircraft_score
+    
+    return {
+        'total_score': round(total_score),
+        'etops_score': etops_score,
+        'environmental_score': env_score,
+        'efficiency_score': eff_score,
+        'aircraft_score': round(aircraft_score),
+        'breakdown': {
+            'ETOPS適合性': f"{etops_score}/25",
+            '環境性能': f"{env_score}/25", 
+            '運航効率': f"{eff_score}/25",
+            '機材性能': f"{round(aircraft_score)}/25"
+        }
+    }
+
+def get_title_and_badge(score):
+    """
+    Determine title and badge based on score
+    """
+    if score >= 90:
+        return {
+            'title': '🏆 エコ航空の達人',
+            'badge': '🌟',
+            'color': 'success',
+            'message': '素晴らしい！持続可能な航空運航のエキスパートです！',
+            'tier': 'レジェンド'
+        }
+    elif score >= 80:
+        return {
+            'title': '✈️ 優秀な経営者', 
+            'badge': '🥇',
+            'color': 'success',
+            'message': '優秀な運航計画です！環境と効率のバランスが取れています。',
+            'tier': 'エキスパート'
+        }
+    elif score >= 70:
+        return {
+            'title': '🌱 駆け出し経営者',
+            'badge': '🥈', 
+            'color': 'warning',
+            'message': '良いスタートです！さらなる改善で上位ランクを目指しましょう。',
+            'tier': '中級者'
+        }
+    elif score >= 60:
+        return {
+            'title': '📚 研修生',
+            'badge': '🥉',
+            'color': 'warning', 
+            'message': '基本はできています。ETOPS適合性と環境性能の向上を目指しましょう。',
+            'tier': '初級者'
+        }
+    else:
+        return {
+            'title': '🔧 要改善',
+            'badge': '⚠️',
+            'color': 'error',
+            'message': '運航計画の見直しが必要です。機材選択から再検討してみてください。',
+            'tier': '見習い'
+        }
+
+def display_score_dashboard(score_data, title_data):
+    """
+    Display scoring dashboard in sidebar
+    """
+    st.sidebar.markdown("---")
+    st.sidebar.header("🎯 ゲームスコア")
+    
+    # Total Score with progress bar
+    st.sidebar.metric(
+        "総合スコア", 
+        f"{score_data['total_score']}/100", 
+        delta=f"目標まで{max(0, 80-score_data['total_score'])}点"
+    )
+    
+    # Progress bar
+    progress = min(score_data['total_score'] / 100, 1.0)
+    st.sidebar.progress(progress)
+    
+    # Title and Badge
+    st.sidebar.markdown(f"### {title_data['badge']} {title_data['title']}")
+    st.sidebar.markdown(f"**ランク**: {title_data['tier']}")
+    
+    # Score breakdown
+    st.sidebar.subheader("📊 スコア内訳")
+    for category, points in score_data['breakdown'].items():
+        st.sidebar.text(f"{category}: {points}")
+    
+    # Achievement message
+    if title_data['color'] == 'success':
+        st.sidebar.success(title_data['message'])
+    elif title_data['color'] == 'warning':
+        st.sidebar.warning(title_data['message'])
+    else:
+        st.sidebar.error(title_data['message'])
+
+def display_achievement_banner(title_data, score):
+    """
+    Display achievement banner in main area
+    """
+    if score >= 80:
+        st.balloons()
+    
+    # Create achievement banner
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if title_data['color'] == 'success':
+            st.success(f"## {title_data['badge']} {title_data['title']} {title_data['badge']}\n### スコア: {score}/100\n{title_data['message']}")
+        elif title_data['color'] == 'warning':
+            st.warning(f"## {title_data['badge']} {title_data['title']} {title_data['badge']}\n### スコア: {score}/100\n{title_data['message']}")
+        else:
+            st.error(f"## {title_data['badge']} {title_data['title']} {title_data['badge']}\n### スコア: {score}/100\n{title_data['message']}")
+
+# --- Helper Functions (existing) ---
 def calculate_etops_requirement(dep_coord, arr_coord, airports_df):
     """Calculate the ETOPS requirement for a route"""
     max_distance_to_nearest_airport = 0
@@ -193,7 +341,7 @@ st.set_page_config(
 
 # --- Title ---
 st.title("✈️ ETOPS Airline Strategy Game")
-st.markdown("**持続可能な航空運航を目指すシミュレーションゲーム**")
+st.markdown("**目標: 80点以上で航空会社経営成功！最高得点100点を目指そう！**")
 
 # --- Sidebar for Game Controls ---
 st.sidebar.header("🎮 Game Controls")
@@ -277,7 +425,7 @@ with col3:
 
 # --- Route Analysis ---
 if departure and arrival and departure != arrival:
-    st.header("3. ルート分析")
+    st.header("3. ルート分析 & ゲーム結果")
     
     # Get coordinates
     dep_coord = (airports_df.loc[departure, 'Latitude'], airports_df.loc[departure, 'Longitude'])
@@ -290,6 +438,25 @@ if departure and arrival and departure != arrival:
     
     # SDG Impact Analysis
     sdg_metrics = calculate_sdg_impact(aircraft, route_distance, passengers)
+    
+    # Calculate Game Score
+    etops_compliant = etops_required_min <= aircraft['ETOPS']
+    capacity_utilization = (passengers / aircraft['Capacity']) * 100
+    
+    score_data = calculate_game_score(
+        etops_compliant, 
+        sdg_metrics['co2_per_passenger'], 
+        capacity_utilization, 
+        aircraft['SDG_Score']
+    )
+    
+    title_data = get_title_and_badge(score_data['total_score'])
+    
+    # Display scoring dashboard in sidebar
+    display_score_dashboard(score_data, title_data)
+    
+    # Display achievement banner
+    display_achievement_banner(title_data, score_data['total_score'])
     
     # Display route map based on selection
     st.subheader("ルートマップ & ETOPS可視化")
@@ -377,27 +544,27 @@ if departure and arrival and departure != arrival:
         st.metric("利用効率スコア", f"{sdg_metrics['utilization_score']:.1f}/10")
         st.metric("総合SDGスコア", f"{sdg_metrics['total_sdg_score']:.1f}/10")
     
-    # Recommendations
-    st.subheader("💡 改善提案")
-    recommendations = []
+    # Recommendations for improvement
+    st.subheader("💡 スコアアップのコツ")
+    improvements = []
     
-    if capacity_utilization < 70:
-        recommendations.append("座席利用率が低いです。需要予測を見直すか、より小型の機材を検討してください")
+    if not etops_compliant:
+        improvements.append("🎯 **ETOPS適合で+25点**: より高性能な機材(A350-900等)を選択しましょう")
     
     if sdg_metrics['co2_per_passenger'] > 150:
-        recommendations.append("乗客1人当たりのCO₂排出量が高いです。より燃費の良い機材を検討してください")
+        improvements.append("🌱 **環境スコアアップ**: 燃費の良い機材選択で環境スコア向上")
     
-    if etops_required_min > aircraft['ETOPS']:
-        recommendations.append("ETOPS要求を満たしていません。経由地の設定や機材変更を検討してください")
+    if capacity_utilization < 80:
+        improvements.append("📈 **効率スコアアップ**: 搭乗率を80%以上に上げると高得点")
     
-    if sdg_metrics['total_sdg_score'] < 6:
-        recommendations.append("SDGスコアが低いです。環境負荷軽減と運航効率の改善が必要です")
+    if aircraft['SDG_Score'] < 8:
+        improvements.append("⭐ **機材スコアアップ**: SDGスコアの高い機材(A350-900等)がおすすめ")
     
-    if recommendations:
-        for i, rec in enumerate(recommendations, 1):
-            st.warning(f"{i}. {rec}")
+    if improvements:
+        for improvement in improvements:
+            st.info(improvement)
     else:
-        st.success("✅ 優秀な運航計画です！環境負荷とETOPS要求の両方を満たしています")
+        st.success("🎉 パーフェクト！全ての要素で高得点を獲得しています！")
 
 # --- Challenge Mode ---
 if st.session_state.game_mode == "challenge_mode":
@@ -411,5 +578,6 @@ if st.session_state.game_mode == "challenge_mode":
 # --- Footer ---
 st.markdown("---")
 st.markdown("**ETOPS Airline Strategy Game** - 持続可能な航空運航を学ぶシミュレーションゲーム")
+st.markdown("**🎯 ゲーム目標**: 80点以上で航空会社経営成功！")
 st.markdown("**ETOPS**: Extended-range Twin-engine Operational Performance Standards")
-st.markdown("💡 **ヒント**: 詳細地図では各空港周辺のETOPS範囲（オレンジ円）が表示されます。飛行ルートがこの範囲から外れないよう計画してください。")
+st.markdown("💡 **ヒント**: 詳細地図では各空港周辺のETOPS範囲（オレンジ円）が表示されます。高得点を目指して機材・ルート・搭乗率を最適化しましょう！")

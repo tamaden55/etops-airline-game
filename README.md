@@ -4,7 +4,7 @@
 
 ## 🚀 **ライブデモ**
 
-**[🎮 今すぐプレイする](https://tamaden55.github.io/etops-airline-game/)**
+**[🎮 今すぐプレイする](https://qzkqn3ynfsbe8cesncaljs.streamlit.app/)**
 
 すぐにゲームを体験したい方は上のリンクからどうぞ！ブラウザ上でETOPS制限の可視化と航空運航シミュレーションを体験できます。
 
@@ -25,7 +25,7 @@
 ## 🚀 クイックスタート
 
 ### **🎮 オンラインで試す**
-**[ライブデモ →](https://tamaden55.github.io/etops-airline-game/)**
+**[ライブデモ →](https://qzkqn3ynfsbe8cesncaljs.streamlit.app/)**
 
 ### **🛠 ローカルで開発**
 

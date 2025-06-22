@@ -412,6 +412,343 @@ map_type = st.sidebar.selectbox(
 )
 st.session_state.map_type = map_type
 
+# Initialize variables
+departure = None
+arrival = None
+passengers = None
+aircraft = None
+
+# --- Game Mode Specific Logic ---
+if game_mode == "challenge_10_routes":
+    # 10 Routes Challenge Mode
+    st.header("🏆 10路線チャレンジモード")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        difficulty = st.selectbox(
+            "難易度を選択",
+            ["easy", "medium", "hard"],
+            format_func=lambda x: {"easy": "😊 Easy", "medium": "😐 Medium", "hard": "😤 Hard"}[x]
+        )
+    
+    with col2:
+        if st.button("🎲 新しいチャレンジを開始"):
+            st.session_state.challenge_routes = generate_challenge_routes(10, difficulty)
+            st.session_state.current_route_index = 0
+            st.session_state.challenge_total_score = 0
+            st.rerun()
+    
+    # Display challenge progress
+    if st.session_state.challenge_routes:
+        progress = sum(1 for r in st.session_state.challenge_routes if r['completed']) / len(st.session_state.challenge_routes)
+        st.progress(progress)
+        st.write(f"進捗: {sum(1 for r in st.session_state.challenge_routes if r['completed'])}/10 路線完了")
+        
+        # Display current route
+        if st.session_state.current_route_index < len(st.session_state.challenge_routes):
+            current_route = st.session_state.challenge_routes[st.session_state.current_route_index]
+            st.subheader(f"路線 {current_route['route_num']}: {current_route['departure']} → {current_route['arrival']}")
+            st.write(f"距離: {current_route['distance_km']:,} km | 乗客数: {current_route['passengers']}人")
+            
+            # Aircraft selection for challenge
+            available_aircraft = aircraft_df.copy()
+            selected_model = st.selectbox(
+                "機材を選択してください",
+                available_aircraft["Model"],
+                key="challenge_aircraft",
+                help="チャレンジモード用機材選択"
+            )
+            
+            aircraft = available_aircraft[available_aircraft["Model"] == selected_model].iloc[0]
+            
+            # Set route variables for analysis
+            departure = current_route['departure']
+            arrival = current_route['arrival']
+            passengers = current_route['passengers']
+
+elif game_mode == "budget_constraint":
+    # Budget Constraint Mode
+    st.header("💰 制限モード")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        constraint_type = st.selectbox(
+            "制限タイプ",
+            ["budget", "category"],
+            format_func=lambda x: "💰 予算制限" if x == "budget" else "✈️ 機材カテゴリ制限"
+        )
+    
+    if constraint_type == "budget":
+        with col2:
+            budget_limit = st.slider("予算上限 (百万USD)", 50, 500, 200, 25)
+        
+        available_aircraft = calculate_budget_constraints(budget_limit, aircraft_df)
+        
+        if len(available_aircraft) == 0:
+            st.error("予算内で利用可能な機材がありません。予算を増やしてください。")
+        else:
+            st.info(f"予算 ${budget_limit}M以内で利用可能な機材: {len(available_aircraft)}機種")
+            
+            # Display available aircraft with prices
+            display_df = available_aircraft[['Model', 'Category', 'ETOPS', 'Capacity', 'Price_Million_USD', 'SDG_Score']].copy()
+            st.dataframe(display_df)
+    
+    else:  # category constraint
+        with col2:
+            allowed_category = st.selectbox(
+                "使用可能機材カテゴリ",
+                ["Regional", "Narrow-body", "Wide-body", "Turboprop"],
+                format_func=lambda x: {
+                    "Regional": "🛩️ リージョナル機",
+                    "Narrow-body": "✈️ ナローボディ機", 
+                    "Wide-body": "🛫 ワイドボディ機",
+                    "Turboprop": "🚁 ターボプロップ機"
+                }[x]
+            )
+        
+        available_aircraft = aircraft_df[aircraft_df['Category'] == allowed_category].copy()
+        st.info(f"{allowed_category}カテゴリ機材: {len(available_aircraft)}機種")
+        
+        # Display available aircraft
+        display_df = available_aircraft[['Model', 'ETOPS', 'Capacity', 'Range', 'SDG_Score']].copy()
+        st.dataframe(display_df)
+    
+    # If aircraft available, proceed with route planning
+    if len(available_aircraft) > 0:
+        st.subheader("機材選択 & ルート計画")
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            selected_model = st.selectbox(
+                "機材を選択",
+                available_aircraft["Model"],
+                help="制限モードで利用可能な機材から選択"
+            )
+            aircraft = available_aircraft[available_aircraft["Model"] == selected_model].iloc[0]
+        
+        with col2:
+            if constraint_type == "budget":
+                remaining_budget = budget_limit - aircraft['Price_Million_USD']
+                st.metric("選択機材価格", f"${aircraft['Price_Million_USD']:.0f}M")
+                st.metric("残予算", f"${remaining_budget:.0f}M")
+            st.metric("機材カテゴリ", aircraft['Category'])
+        
+        # Route planning
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            departure = st.selectbox("出発地", airports_df.index, 
+                                   format_func=lambda x: f"{x} - {airports_df.loc[x, 'Name']}")
+        with col2:
+            arrival_options = [code for code in airports_df.index if code != departure]
+            arrival = st.selectbox("到着地", arrival_options,
+                                 format_func=lambda x: f"{x} - {airports_df.loc[x, 'Name']}")
+        with col3:
+            passengers = st.number_input("搭乗予定人数", 1, int(aircraft['Capacity']), 
+                                       min(200, int(aircraft['Capacity'])))
+
+else:
+    # Normal Route Planning Mode
+    st.header("🎯 ルート計画モード")
+    
+    # Aircraft category filter
+    category_filter = st.selectbox(
+        "機材カテゴリでフィルター",
+        ["All"] + list(aircraft_df['Category'].unique()),
+        format_func=lambda x: "全カテゴリ" if x == "All" else x
+    )
+    
+    if category_filter == "All":
+        available_aircraft = aircraft_df.copy()
+    else:
+        available_aircraft = aircraft_df[aircraft_df['Category'] == category_filter].copy()
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        selected_model = st.selectbox(
+            "使用する機材を選択してください",
+            available_aircraft["Model"],
+            help="カテゴリフィルターで絞り込まれた機材から選択してください"
+        )
+        aircraft = available_aircraft[available_aircraft["Model"] == selected_model].iloc[0]
+    
+    with col2:
+        st.metric("ETOPS性能", f"{aircraft['ETOPS']}分")
+        st.metric("航続距離", f"{aircraft['Range']:,}km")
+        st.metric("価格", f"${aircraft['Price_Million_USD']:.0f}M")
+    
+    # Display aircraft details
+    st.subheader("選択した機材の詳細")
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.metric("製造会社", aircraft['Manufacturer'])
+    with col2:
+        st.metric("カテゴリ", aircraft['Category'])
+    with col3:
+        st.metric("座席数", f"{aircraft['Capacity']}席")
+    with col4:
+        st.metric("巡航速度", f"{aircraft['Speed']}km/h")
+    with col5:
+        st.metric("SDGスコア", f"{aircraft['SDG_Score']}/10")
+    
+    # Route planning
+    st.subheader("ルート計画")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        departure = st.selectbox("出発地", airports_df.index,
+                               format_func=lambda x: f"{x} - {airports_df.loc[x, 'Name']}")
+    with col2:
+        arrival_options = [code for code in airports_df.index if code != departure]
+        arrival = st.selectbox("到着地", arrival_options,
+                             format_func=lambda x: f"{x} - {airports_df.loc[x, 'Name']}")
+    with col3:
+        passengers = st.number_input("搭乗予定人数", 1, int(aircraft['Capacity']), 
+                                   min(200, int(aircraft['Capacity'])),
+                                   help=f"最大搭乗可能人数: {aircraft['Capacity']}人")
+
+# --- Route Analysis (Common for all modes) ---
+if departure and arrival and departure != arrival and aircraft is not None:
+    st.header("ルート分析 & ゲーム結果")
+    
+    # Get coordinates
+    dep_coord = (airports_df.loc[departure, 'Latitude'], airports_df.loc[departure, 'Longitude'])
+    arr_coord = (airports_df.loc[arrival, 'Latitude'], airports_df.loc[arrival, 'Longitude'])
+    
+    # Calculate route metrics
+    route_distance = geodesic(dep_coord, arr_coord).km
+    etops_required_km = calculate_etops_requirement(dep_coord, arr_coord, airports_df)
+    etops_required_min = (etops_required_km / aircraft['Speed']) * 60
+    
+    # SDG Impact Analysis
+    sdg_metrics = calculate_sdg_impact(aircraft, route_distance, passengers)
+    
+    # Calculate Game Score
+    etops_compliant = etops_required_min <= aircraft['ETOPS']
+    capacity_utilization = (passengers / aircraft['Capacity']) * 100
+    
+    if game_mode == "challenge_10_routes":
+        score_data = calculate_route_score_detailed(
+            etops_compliant, sdg_metrics['co2_per_passenger'], 
+            capacity_utilization, aircraft['SDG_Score'], route_distance
+        )
+    else:
+        score_data = calculate_game_score(
+            etops_compliant, sdg_metrics['co2_per_passenger'], 
+            capacity_utilization, aircraft['SDG_Score']
+        )
+    
+    title_data = get_title_and_badge(score_data['total_score'])
+    
+    # Display scoring dashboard in sidebar (for non-challenge modes)
+    if game_mode != "challenge_10_routes":
+        display_score_dashboard(score_data, title_data)
+        display_achievement_banner(title_data, score_data['total_score'])
+    
+    # Challenge mode specific handling
+    if game_mode == "challenge_10_routes" and st.session_state.current_route_index < len(st.session_state.challenge_routes):
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("ETOPS適合", "✅" if etops_compliant else "❌")
+        with col2:
+            st.metric("CO₂/人", f"{sdg_metrics['co2_per_passenger']:.1f} kg")
+        with col3:
+            st.metric("搭乗率", f"{capacity_utilization:.1f}%")
+        with col4:
+            st.metric("路線スコア", f"{score_data['total_score']}/105")
+        
+        if st.button("この路線を完了", key="complete_route"):
+            # Mark route as completed
+            st.session_state.challenge_routes[st.session_state.current_route_index]['completed'] = True
+            st.session_state.challenge_routes[st.session_state.current_route_index]['score'] = score_data['total_score']
+            st.session_state.challenge_total_score += score_data['total_score']
+            st.session_state.current_route_index += 1
+            
+            if st.session_state.current_route_index >= len(st.session_state.challenge_routes):
+                # Challenge completed
+                st.balloons()
+                avg_score = st.session_state.challenge_total_score / 10
+                st.success(f"🎉 チャレンジ完了！ 総合スコア: {st.session_state.challenge_total_score}/1050")
+                st.success(f"平均スコア: {avg_score:.1f}/105")
+                
+                if avg_score >= 90:
+                    st.success("🌟 レジェンド級の経営者！")
+                elif avg_score >= 80:
+                    st.success("🥇 優秀な経営者！")
+                elif avg_score >= 70:
+                    st.warning("🥈 中級レベル！もう少しで上級者！")
+                else:
+                    st.info("🥉 練習を重ねて上達しましょう！")
+            
+            st.rerun()
+    
+    # Display route map
+    st.subheader("ルートマップ & ETOPS可視化")
+    
+    if st.session_state.map_type == "folium":
+        try:
+            etops_map = create_etops_map(
+                dep_coord, arr_coord,
+                f"{departure} ({airports_df.loc[departure, 'Name']})",
+                f"{arrival} ({airports_df.loc[arrival, 'Name']})",
+                aircraft['ETOPS'], etops_required_min
+            )
+            map_data = st_folium(etops_map, width=700, height=500)
+            st.info("🗺️ **地図の見方**: オレンジの円はETOPS範囲を示しています。青い線が飛行ルートで、全区間がETOPS範囲内にある必要があります。")
+        except Exception as e:
+            st.warning(f"詳細地図の表示に失敗しました。シンプル地図を表示します。")
+            route_map = create_route_map_plotly(dep_coord, arr_coord, 
+                                             f"{departure} ({airports_df.loc[departure, 'Name']})",
+                                             f"{arrival} ({airports_df.loc[arrival, 'Name']})")
+            st.plotly_chart(route_map, use_container_width=True)
+    else:
+        route_map = create_route_map_plotly(dep_coord, arr_coord, 
+                                         f"{departure} ({airports_df.loc[departure, 'Name']})",
+                                         f"{arrival} ({airports_df.loc[arrival, 'Name']})")
+        st.plotly_chart(route_map, use_container_width=True)
+    
+    # Route metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("飛行距離", f"{route_distance:,.0f} km")
+    with col2:
+        etops_status = "✅ 適合" if etops_required_min <= aircraft['ETOPS'] else "❌ 不適合"
+        st.metric("ETOPS要求", f"{etops_required_min:.0f}分", delta=etops_status)
+    with col3:
+        st.metric("総CO₂排出量", f"{sdg_metrics['total_co2']:,.0f} kg")
+    with col4:
+        st.metric("乗客1人当たりCO₂", f"{sdg_metrics['co2_per_passenger']:.1f} kg")
+    
+    # Score breakdown for enhanced modes
+    if game_mode == "challenge_10_routes" and 'distance_bonus' in score_data:
+        st.subheader("スコア詳細 (チャレンジモード)")
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("ETOPS", f"{score_data['etops_score']}/25")
+        with col2:
+            st.metric("環境性能", f"{score_data['environmental_score']}/25")
+        with col3:
+            st.metric("運航効率", f"{score_data['efficiency_score']}/25")
+        with col4:
+            st.metric("機材性能", f"{score_data['aircraft_score']}/25")
+        with col5:
+            st.metric("距離ボーナス", f"+{score_data['distance_bonus']}")
+
+# Display completed routes summary for challenge mode
+if game_mode == "challenge_10_routes" and st.session_state.challenge_routes:
+    completed_routes = [r for r in st.session_state.challenge_routes if r['completed']]
+    if completed_routes:
+        st.subheader("完了済み路線")
+        summary_df = pd.DataFrame(completed_routes)
+        st.dataframe(summary_df[['route_num', 'departure', 'arrival', 'distance_km', 'passengers', 'score']])
+
+# --- Footer ---
+st.markdown("---")
+st.markdown("**ETOPS Airline Strategy Game** - 持続可能な航空運航を学ぶシミュレーションゲーム")
+st.markdown("**🎯 ゲーム目標**: 80点以上で航空会社経営成功！")
+st.markdown("**✈️ 新機能**: 21機種の航空機 | 10路線チャレンジ | 予算・機材制限モード")
+st.markdown("**ETOPS**: Extended-range Twin-engine Operational Performance Standards")地図 (Folium)" if x == "folium" else "シンプル地図 (Plotly)"
+)
+st.session_state.map_type = map_type
+
 # --- Aircraft Selection ---
 st.header("1. 機材選択")
 col1, col2 = st.columns([2, 1])

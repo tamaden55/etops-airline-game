@@ -1,16 +1,36 @@
-IATA,Name,Latitude,Longitude,Country,Region
-NRT,Narita,35.77,140.39,Japan,Asia
-JFK,John F Kennedy,40.64,-73.78,USA,North America
-SIN,Changi,1.36,103.99,Singapore,Asia
-LHR,Heathrow,51.47,-0.45,UK,Europe
-SYD,Sydney,-33.93,151.18,Australia,Oceania
-LAX,Los Angeles,33.94,-118.41,USA,North America
-CDG,Charles de Gaulle,49.01,2.55,France,Europe
-DXB,Dubai,25.25,55.36,UAE,Middle East
-HKG,Hong Kong,22.31,114.17,Hong Kong,Asia
-ICN,Incheon,37.46,126.44,South Korea,Asia
-BKK,Bangkok,13.69,100.75,Thailand,Asia
-FRA,Frankfurt,50.03,8.57,Germany,Europe
-AMS,Amsterdam,52.31,4.76,Netherlands,Europe
-DOH,Doha,25.27,51.61,Qatar,Middle East
-YVR,Vancouver,49.19,-123.18,Canada,North America
+IATA,Name,Latitude,Longitude,Region,Hub_Type
+NRT,Narita International,35.77,140.39,Asia,Major Hub
+HND,Tokyo Haneda,35.55,139.78,Asia,Major Hub
+JFK,John F Kennedy,40.64,-73.78,North America,Major Hub
+LAX,Los Angeles,33.94,-118.41,North America,Major Hub
+LHR,London Heathrow,51.47,-0.45,Europe,Major Hub
+CDG,Charles de Gaulle,49.01,2.55,Europe,Major Hub
+FRA,Frankfurt,50.03,8.57,Europe,Major Hub
+SIN,Singapore Changi,1.36,103.99,Asia,Major Hub
+DXB,Dubai International,25.25,55.36,Middle East,Major Hub
+DOH,Doha Hamad,25.27,51.61,Middle East,Major Hub
+SYD,Sydney,33.93,151.18,Oceania,Major Hub
+MEL,Melbourne,-37.67,144.84,Oceania,Major Hub
+ICN,Seoul Incheon,37.46,126.44,Asia,Major Hub
+PVG,Shanghai Pudong,31.14,121.81,Asia,Major Hub
+HKG,Hong Kong,22.31,113.91,Asia,Major Hub
+BKK,Bangkok Suvarnabhumi,13.68,100.75,Asia,Regional Hub
+KUL,Kuala Lumpur,2.75,101.71,Asia,Regional Hub
+DEL,Delhi Indira Gandhi,28.56,77.10,Asia,Regional Hub
+BOM,Mumbai,19.09,72.87,Asia,Regional Hub
+AMS,Amsterdam Schiphol,52.31,4.77,Europe,Regional Hub
+ZUR,Zurich,47.46,8.55,Europe,Regional Hub
+MUC,Munich,48.35,11.79,Europe,Regional Hub
+CPH,Copenhagen,55.62,12.66,Europe,Regional Hub
+ARN,Stockholm Arlanda,59.65,17.92,Europe,Regional Hub
+YVR,Vancouver,-49.19,-123.18,North America,Regional Hub
+YYZ,Toronto Pearson,43.68,-79.63,North America,Regional Hub
+ORD,Chicago O'Hare,41.98,-87.90,North America,Regional Hub
+ATL,Atlanta Hartsfield,33.64,-84.43,North America,Regional Hub
+MIA,Miami,25.79,-80.29,North America,Regional Hub
+GRU,São Paulo Guarulhos,-23.43,-46.47,South America,Regional Hub
+EZE,Buenos Aires Ezeiza,-34.82,-58.54,South America,Regional Hub
+SCL,Santiago,-33.39,-70.79,South America,Regional Hub
+JNB,Johannesburg OR Tambo,-26.14,28.25,Africa,Regional Hub
+CAI,Cairo,30.12,31.41,Africa,Regional Hub
+CPT,Cape Town,-33.97,18.60,Africa,Regional Hub

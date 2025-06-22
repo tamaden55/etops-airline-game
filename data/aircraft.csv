@@ -1,0 +1,7 @@
+Model,ETOPS,Speed,Range,Fuel_L_per_km,CO2_kg_per_km,Capacity,Manufacturer,SDG_Score
+B787-9,330,870,14100,5.6,14.0,290,Boeing,8.5
+A350-900,370,850,15000,5.2,13.0,315,Airbus,9.0
+B737MAX,180,800,6570,3.8,9.2,189,Boeing,7.0
+A320neo,180,830,6300,3.5,8.8,180,Airbus,7.5
+B777-300ER,207,905,13649,6.8,17.0,396,Boeing,6.0
+A330-900neo,180,870,13334,5.8,14.5,287,Airbus,7.8

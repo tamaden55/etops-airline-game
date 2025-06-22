@@ -1,0 +1,16 @@
+IATA,Name,Latitude,Longitude,Country,Region
+NRT,Narita,35.77,140.39,Japan,Asia
+JFK,John F Kennedy,40.64,-73.78,USA,North America
+SIN,Changi,1.36,103.99,Singapore,Asia
+LHR,Heathrow,51.47,-0.45,UK,Europe
+SYD,Sydney,-33.93,151.18,Australia,Oceania
+LAX,Los Angeles,33.94,-118.41,USA,North America
+CDG,Charles de Gaulle,49.01,2.55,France,Europe
+DXB,Dubai,25.25,55.36,UAE,Middle East
+HKG,Hong Kong,22.31,114.17,Hong Kong,Asia
+ICN,Incheon,37.46,126.44,South Korea,Asia
+BKK,Bangkok,13.69,100.75,Thailand,Asia
+FRA,Frankfurt,50.03,8.57,Germany,Europe
+AMS,Amsterdam,52.31,4.76,Netherlands,Europe
+DOH,Doha,25.27,51.61,Qatar,Middle East
+YVR,Vancouver,49.19,-123.18,Canada,North America
